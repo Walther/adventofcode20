@@ -29,33 +29,11 @@ impl Debug for GridEntry {
 
 type TobogganMap = HashMap<(usize, usize), GridEntry>;
 
-fn main() {
-    let mut map = TobogganMap::new();
+fn main() -> Result<(), String> {
     const INPUT: &str = include_str!("input.txt");
 
     // Parse the map
-    let height = INPUT.lines().count();
-    let width = INPUT.lines().next().unwrap().chars().count();
-    let mut y = 0;
-    let mut x;
-    for line in INPUT.lines() {
-        x = 0;
-        for char in line.chars() {
-            match char {
-                '.' => {
-                    map.insert((x, y), GridEntry::Empty);
-                }
-                '#' => {
-                    map.insert((x, y), GridEntry::Tree);
-                }
-                _ => {
-                    panic!("Invalid character found in input");
-                }
-            }
-            x = x + 1;
-        }
-        y = y + 1;
-    }
+    let (map, height, width) = parse_map(INPUT)?;
 
     // Start sledding down
     let trees = count_trees(&map, &TOBOGGAN_PATHS[0], height, width);
@@ -66,6 +44,36 @@ fn main() {
         .map(|p| count_trees(&map, &p, height, width))
         .product();
     println!("Part 2: {}", tree_multiples);
+
+    Ok(())
+}
+
+fn parse_map(input: &str) -> Result<(TobogganMap, usize, usize), String> {
+    let mut map = TobogganMap::new();
+    let height = input.lines().count();
+    let width = input.lines().next().unwrap().chars().count();
+    let mut y = 0;
+    let mut x;
+    for line in input.lines() {
+        x = 0;
+        for char in line.chars() {
+            match char {
+                '.' => {
+                    map.insert((x, y), GridEntry::Empty);
+                }
+                '#' => {
+                    map.insert((x, y), GridEntry::Tree);
+                }
+                _ => {
+                    return Err(String::from("Invalid character found in input"));
+                }
+            }
+            x = x + 1;
+        }
+        y = y + 1;
+    }
+
+    Ok((map, height, width))
 }
 
 fn count_trees(map: &TobogganMap, path: &Path, height: usize, width: usize) -> usize {
