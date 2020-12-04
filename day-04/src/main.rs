@@ -41,11 +41,11 @@ impl Default for MaybePassport {
 #[derive(Debug)]
 struct FullPassport {
     /// Birth Year
-    byr: usize,
+    byr: String,
     /// Issue Year
-    iyr: usize,
+    iyr: String,
     /// Expiration Year
-    eyr: usize,
+    eyr: String,
     /// Height
     hgt: String,
     /// Hair Color
@@ -55,7 +55,7 @@ struct FullPassport {
     /// Passport ID
     pid: String,
     /// Country ID
-    cid: Option<usize>,
+    cid: Option<String>,
 }
 
 impl TryFrom<MaybePassport> for FullPassport {
@@ -63,60 +63,44 @@ impl TryFrom<MaybePassport> for FullPassport {
 
     fn try_from(value: MaybePassport) -> Result<Self, Self::Error> {
         Ok(FullPassport {
-            byr: value
-                .byr
-                .ok_or("Missing byr")?
-                .parse()
-                .map_err(|_| "Invalid byr")?,
-            iyr: value
-                .iyr
-                .ok_or("Missing iyr")?
-                .parse()
-                .map_err(|_| "Invalid iyr")?,
-            eyr: value
-                .eyr
-                .ok_or("Missing eyr")?
-                .parse()
-                .map_err(|_| "Invalid eyr")?,
-            hgt: value
-                .hgt
-                .ok_or("Missing hgt")?
-                .parse()
-                .map_err(|_| "Invalid hgt")?,
-            hcl: value
-                .hcl
-                .ok_or("Missing hcl")?
-                .parse()
-                .map_err(|_| "Invalid hcl")?,
-            ecl: value
-                .ecl
-                .ok_or("Missing ecl")?
-                .parse()
-                .map_err(|_| "Invalid ecl")?,
-            pid: value
-                .pid
-                .ok_or("Missing pid")?
-                .parse()
-                .map_err(|_| "Invalid pid")?,
-            cid: if let Some(v) = value.cid {
-                Some(v.parse().map_err(|_| "Invalid cid")?)
-            } else {
-                None
-            },
+            byr: value.byr.ok_or("Missing byr")?,
+            iyr: value.iyr.ok_or("Missing iyr")?,
+            eyr: value.eyr.ok_or("Missing eyr")?,
+            hgt: value.hgt.ok_or("Missing hgt")?,
+            hcl: value.hcl.ok_or("Missing hcl")?,
+            ecl: value.ecl.ok_or("Missing ecl")?,
+            pid: value.pid.ok_or("Missing pid")?,
+            cid: value.cid,
         })
     }
 }
 
 impl FullPassport {
     fn is_valid(&self) -> bool {
-        // Birth year between 1920 and 2002
-        self.byr >= 1920 && self.byr <= 2002
+        true
 
+        // Birth year between 1920 and 2002
+        && {
+            match self.byr.parse::<usize>() {
+                Ok(byr) => byr >= 1920 && byr <= 2002,
+                Err(_) => false,
+            }
+        }
         // Issue year between 2010 and 2020
-        && self.iyr >= 2010 && self.iyr <= 2020
+        && {
+            match self.iyr.parse::<usize>() {
+                Ok(iyr) => iyr >= 2010 && iyr <= 2020,
+                Err(_) => false,
+            }
+        }
 
         // Expiration year between 2020 and 2030
-        && self.eyr >= 2020 && self.eyr <= 2030
+        && {
+            match self.eyr.parse::<usize>() {
+                Ok(eyr) => eyr >= 2020 && eyr <= 2030,
+                Err(_) => false,
+            }
+        }
 
         // Height: a number followed by either cm or in:
         // If cm, the number must be at least 150 and at most 193.
@@ -126,20 +110,19 @@ impl FullPassport {
             let len = self.hgt.len();
             let height = &self.hgt[..len-2];
             let unit = &self.hgt[len-2..len];
-            if let Ok(height) = height.parse::<usize>() {
-                dbg!(height);
-                dbg!(unit);
-                match unit {
-                    "cm" => {
+            match height.parse::<usize>() {
+                Ok(height) => {
+                    match unit {
+                        "cm" => {
                             height >= 150 && height <= 193
-                    },
-                    "in" => {
+                        },
+                        "in" => {
                             height >= 59 && height <= 76
-                    },
-                    _ => false
-                }
-            } else {
-                false
+                        },
+                        _ => false
+                    }
+                },
+                Err(_) => false
             }
         }
 
@@ -160,7 +143,6 @@ impl FullPassport {
         // Passport id: a nine-digit number, including leading zeroes.
         // Ugly regex
         && {
-            // dbg!(&self.pid);
             let re = Regex::new(r"^[0-9]{9}$").unwrap();
             re.is_match(&self.pid)
         }
@@ -189,21 +171,19 @@ fn main() {
             let key = key_val.next().unwrap();
             let val = key_val.next().unwrap();
             match key {
-                "byr" => maybe_passport.byr = Some(val.to_string()),
-                "iyr" => maybe_passport.iyr = Some(val.to_string()),
-                "eyr" => maybe_passport.eyr = Some(val.to_string()),
-                "hgt" => maybe_passport.hgt = Some(val.to_string()),
-                "hcl" => maybe_passport.hcl = Some(val.to_string()),
-                "ecl" => maybe_passport.ecl = Some(val.to_string()),
-                "pid" => maybe_passport.pid = Some(val.to_string()),
-                "cid" => maybe_passport.cid = Some(val.to_string()),
+                "byr" => maybe_passport.byr = Some(val.to_owned()),
+                "iyr" => maybe_passport.iyr = Some(val.to_owned()),
+                "eyr" => maybe_passport.eyr = Some(val.to_owned()),
+                "hgt" => maybe_passport.hgt = Some(val.to_owned()),
+                "hcl" => maybe_passport.hcl = Some(val.to_owned()),
+                "ecl" => maybe_passport.ecl = Some(val.to_owned()),
+                "pid" => maybe_passport.pid = Some(val.to_owned()),
+                "cid" => maybe_passport.cid = Some(val.to_owned()),
                 _ => panic!("Invalid passport field"),
             }
         }
         maybe_passports.push(maybe_passport);
     }
-
-    dbg!(maybe_passports.len());
 
     // Part 1
     let full_passports: Vec<FullPassport> = maybe_passports
@@ -211,7 +191,6 @@ fn main() {
         .filter_map(|p| FullPassport::try_from(p.clone()).ok())
         .collect();
 
-    // dbg!(&full_passports);
     println!("Part 1: {}", full_passports.len());
 
     let valid_passports = full_passports.iter().filter(|p| p.is_valid()).count();
